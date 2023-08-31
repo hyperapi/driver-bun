@@ -1,0 +1,32 @@
+{
+  "name": "bun-hyperapi-driver",
+  "module": "main.js",
+  "type": "module",
+  "devDependencies": {
+	"@babel/core": "7.22.1",
+	"@babel/eslint-parser": "^7.21.8",
+	"bun-types": "latest",
+	"eslint": "^8.45.0",
+	"eslint-config-xo": "^0.43.1",
+	"eslint-plugin-import": "^2.27.5",
+	"eslint-plugin-node": "^11.1.0",
+	"eslint-plugin-promise": "^6.1.1",
+	"eslint-plugin-unicorn": "^48.0.0"
+  },
+  "description": "To install dependencies:",
+  "version": "1.0.0",
+  "main": "main.js",
+  "dependencies": {
+	"@hyperapi/core": "^0.1.0-beta.2",
+	"oh-my-props": ">= 3.0.0-beta.20",
+	"cbor-x": "^1.5.4"
+  },
+  "scripts": {
+	"test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "peerDependencies": {
+	"typescript": "^5.0.0"
+  }
+}

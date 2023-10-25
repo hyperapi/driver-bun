@@ -1,6 +1,5 @@
 
 /* eslint-disable import/extensions */
-/* eslint-disable node/no-unsupported-features/node-builtins */
 /* eslint-disable import/no-unresolved */
 
 import HyperAPIDriver            from '@hyperapi/core/driver';
@@ -32,6 +31,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		this.#bunserver = Bun.serve({
 			port,
 			fetch: async (request, server) => {
+				const { address: ip_address } = server.requestIP(request); // FIXME: doesn't work after async functions
 				const url = new URL(request.url);
 
 				if (url.pathname.startsWith(path) !== true) {
@@ -49,7 +49,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 					request.headers.get('Accept'),
 				);
 
-				if (args === 'UNSUPPORTED_CONTENT_TYPE') {
+				if (args === null) {
 					return new Response(
 						'',
 						{
@@ -57,7 +57,8 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 						},
 					);
 				}
-				const { address: ip_address } = server.requestIP(request);
+				// const { address: ip_address } = server.requestIP(request);
+				// FIXME: doesn't work after async functions
 
 				const hyperApiRequest = new HyperAPIRequest(method, args);
 				hyperApiRequest.set('request', request);

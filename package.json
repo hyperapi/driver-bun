@@ -16,6 +16,9 @@
 	"description": "To install dependencies:",
 	"version": "1.0.0",
 	"main": "src/main.js",
+	"engines": {
+		"node": ">=12.0.0"
+	},
 	"dependencies": {
 		"@hyperapi/core": "^0.1.0-beta.5",
 		"oh-my-props": ">= 3.0.0-beta.20",

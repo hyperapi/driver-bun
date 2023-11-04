@@ -4,7 +4,7 @@
 
 import HyperAPIDriver            from '@hyperapi/core/driver';
 import HyperAPIRequest           from '@hyperapi/core/request';
-import HyperAPIResponse          from '@hyperapi/core/response';
+import HyperAPIError             from '@hyperapi/core/error';
 import { HyperAPIInternalError } from '@hyperapi/core/api-errors';
 import IP                        from '@kirick/ip';
 
@@ -29,6 +29,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 
 		super();
 		this.#bunserver = Bun.serve({
+			development: false,
 			port,
 			fetch: async (request, server) => {
 				const { address: ip_address } = server.requestIP(request); // FIXME: doesn't work after async functions
@@ -57,6 +58,21 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 						},
 					);
 				}
+
+				if (args instanceof HyperAPIError) {
+					return new Response(
+						parseResponseTo(
+							preffered_format,
+							args.getResponse(),
+						),
+						{
+							status: 400,
+							headers: {
+								'Content-Type': 'application/' + preffered_format,
+							},
+						},
+					);
+				}
 				// const { address: ip_address } = server.requestIP(request);
 				// FIXME: doesn't work after async functions
 
@@ -71,9 +87,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 					hyperAPIResponse.is_success === false
 					&& hyperAPIResponse.error.httpStatus === undefined
 				) {
-					const internal_error = new HyperAPIResponse(
-						new HyperAPIInternalError(),
-					);
+					const internal_error = new HyperAPIInternalError();
 
 					return new Response(
 						parseResponseTo(

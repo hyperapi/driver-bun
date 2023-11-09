@@ -25,28 +25,38 @@ export async function parseArguments(request, url) {
 	}
 	else if (request.body) {
 		const type_header = request.headers.get('Content-Type');
-		try {
-			switch (getMIME(type_header)) {
-				case 'application/json':
+
+		switch (getMIME(type_header)) {
+			case 'application/json':
+				try {
 					args = await request.json();
-					break;
-				case 'application/x-www-form-urlencoded':
+				}
+				catch {
+					throw new HyperAPIInvalidParametersError();
+				}
+				break;
+			case 'application/x-www-form-urlencoded':
+				try {
 					args = Object.fromEntries(
 						new URLSearchParams(
 							await request.text(),
 						),
 					);
-					break;
-				case 'application/cbor':
+				}
+				catch {
+					throw new HyperAPIInvalidParametersError();
+				}
+				break;
+			case 'application/cbor':
+				try {
 					args = decode(await request.arrayBuffer());
-					break;
-				default:
-					return null;
-			}
-		}
-		catch (error) {
-			console.error(error);
-			return new HyperAPIInvalidParametersError();
+				}
+				catch {
+					throw new HyperAPIInvalidParametersError();
+				}
+				break;
+			default:
+				return null;
 		}
 	}
 	return args;

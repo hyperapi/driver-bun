@@ -43,12 +43,36 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 						},
 					);
 				}
-
+				let args = {};
 				const method = url.pathname.slice(path.length);
-				const args = await parseArguments(request, url);
 				const preffered_format = parseAcceptHeader(
 					request.headers.get('Accept'),
 				);
+				try {
+					args = await parseArguments(request, url);
+				}
+				catch (error) {
+					if (error instanceof HyperAPIError) {
+						return new Response(
+							parseResponseTo(
+								preffered_format,
+								error.getResponse(),
+							),
+							{
+								status: error.httpStatus,
+								headers: {
+									'Content-Type': 'application/' + preffered_format,
+								},
+							},
+						);
+					}
+					return new Response(
+						'',
+						{
+							status: 500,
+						},
+					);
+				}
 
 				if (args === null) {
 					return new Response(
@@ -96,6 +120,18 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 						),
 						{
 							status: 500,
+							headers: {
+								'Content-Type': 'application/' + preffered_format,
+							},
+						},
+					);
+				}
+
+				if (request.method === 'HEAD') {
+					return new Response(
+						'',
+						{
+							status: hyperAPIResponse.error?.httpStatus ?? 200,
 							headers: {
 								'Content-Type': 'application/' + preffered_format,
 							},

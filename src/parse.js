@@ -15,7 +15,7 @@ export function getMIME(type) {
 	return type;
 }
 
-export async function parseArguments(request, url) {
+export async function parseArguments(request, url, multipart_formdata_enabled) {
 	let args = {};
 
 	if (request.method === 'GET' || request.method === 'HEAD') {
@@ -25,6 +25,7 @@ export async function parseArguments(request, url) {
 	}
 	else if (request.body) {
 		const type_header = request.headers.get('Content-Type');
+		console.log(type_header);
 
 		switch (getMIME(type_header)) {
 			case 'application/json':
@@ -32,6 +33,22 @@ export async function parseArguments(request, url) {
 					args = await request.json();
 				}
 				catch {
+					throw new HyperAPIInvalidParametersError();
+				}
+				break;
+			case 'multipart/form-data':
+				if (multipart_formdata_enabled !== true) {
+					return null;
+				}
+
+				try {
+					const formdata = await request.formData();
+					args = Object.fromEntries(
+						formdata.entries(),
+					);
+				}
+				catch (error) {
+					console.error(error);
 					throw new HyperAPIInvalidParametersError();
 				}
 				break;

@@ -15,10 +15,11 @@ import {
 
 export default class HyperAPIBunDriver extends HyperAPIDriver {
 	#bunserver;
-
+	#multipart_formdata_enabled;
 	constructor({
 		path = '/api/',
 		port,
+		multipart_formdata_enabled = false,
 	}) {
 		if (typeof path !== 'string') {
 			throw new TypeError('Property "path" must be a string.');
@@ -28,6 +29,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		}
 
 		super();
+		this.#multipart_formdata_enabled = multipart_formdata_enabled;
 		this.#bunserver = Bun.serve({
 			development: false,
 			port,
@@ -49,7 +51,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 					request.headers.get('Accept'),
 				);
 				try {
-					args = await parseArguments(request, url);
+					args = await parseArguments(request, url, this.#multipart_formdata_enabled);
 				}
 				catch (error) {
 					if (error instanceof HyperAPIError) {

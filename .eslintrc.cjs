@@ -29,6 +29,9 @@ module.exports = {
 	globals: {
 		Bun: 'readonly',
 	},
+	ignorePatterns: [
+		'dist/**/*',
+	],
 	rules: {
 		'array-bracket-spacing': [
 			'warn',

@@ -1,8 +1,6 @@
-var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -16,14 +14,6 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/main.js
@@ -32,16 +22,24 @@ __export(main_exports, {
   default: () => HyperAPIBunDriver
 });
 module.exports = __toCommonJS(main_exports);
-var import_core2 = require("@hyperapi/core");
-var import_ip = __toESM(require("@kirick/ip"), 1);
+var import_core3 = require("@hyperapi/core");
+var import_ip = require("@kirick/ip");
 
-// src/libs/http-error.js
+// src/http-error.js
 var HttpError = class extends Error {
+  /** @type {number} */
   #status;
+  /**
+   * @param {number} status - HTTP status code.
+   */
   constructor(status) {
     super("");
     this.#status = status;
   }
+  /**
+   * Creates a Response from the error.
+   * @returns {Response} -
+   */
   getResponse() {
     return new Response(
       "",
@@ -52,15 +50,13 @@ var HttpError = class extends Error {
   }
 };
 
-// src/libs/parse.js
+// src/parse.js
 var import_core = require("@hyperapi/core");
 var import_cbor_x = require("cbor-x");
 function getMIME(type) {
-  if (typeof type === "string") {
-    const index = type.indexOf(";");
-    if (index !== -1) {
-      return type.slice(0, index);
-    }
+  const index = type.indexOf(";");
+  if (index !== -1) {
+    return type.slice(0, index);
   }
   return type;
 }
@@ -72,7 +68,6 @@ async function parseArguments(request, url, multipart_formdata_enabled) {
     );
   } else if (request.body) {
     const type_header = request.headers.get("Content-Type");
-    console.log(type_header);
     switch (getMIME(type_header)) {
       case "application/json":
         try {
@@ -109,7 +104,9 @@ async function parseArguments(request, url, multipart_formdata_enabled) {
       case "application/cbor":
         try {
           args = (0, import_cbor_x.decode)(
-            await request.arrayBuffer()
+            new Uint8Array(
+              await request.arrayBuffer()
+            )
           );
         } catch {
           throw new import_core.HyperAPIInvalidParametersError();
@@ -142,20 +139,56 @@ function parseResponseTo(format, body) {
   if (format === "cbor") {
     return (0, import_cbor_x.encode)(body);
   }
+  throw new TypeError("Invalid response format given.");
 }
+
+// src/request.js
+var import_core2 = require("@hyperapi/core");
+var HyperAPIBunRequest = class extends import_core2.HyperAPIRequest {
+  /** @type {Request} */
+  request;
+  /** @type {URL} */
+  url;
+  /** @type {import('@kirick/ip').IP} */
+  ip;
+  /**
+   * @param {string} module_path -
+   * @param {HyperAPIRequestArgs} args -
+   * @param {object} data -
+   * @param {Request} data.request -
+   * @param {URL} data.url -
+   * @param {import('@kirick/ip').IP} data.ip -
+   */
+  constructor(module_path, args, {
+    request,
+    url,
+    ip
+  }) {
+    super(module_path, args);
+    this.request = request;
+    this.url = url;
+    this.ip = ip;
+  }
+};
 
 // src/main.js
 var HTTP_METHOD_NO_RESPONSE_BODY = /* @__PURE__ */ new Set([
   "HEAD",
   "OPTIONS"
 ]);
-var HyperAPIBunDriver = class extends import_core2.HyperAPIDriver {
+var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
   #path;
   #multipart_formdata_enabled;
   #bunserver;
+  /**
+   * @param {object} options -
+   * @param {string} [options.path] - Path to serve. Default: `/api/`.
+   * @param {number} [options.port] - HTTP server port. Default: `8001`.
+   * @param {boolean} [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
+   */
   constructor({
     path = "/api/",
-    port,
+    port = 8001,
     multipart_formdata_enabled = false
   }) {
     if (typeof path !== "string") {
@@ -173,9 +206,18 @@ var HyperAPIBunDriver = class extends import_core2.HyperAPIDriver {
       fetch: async (request, server) => this.#processRequest(request, server)
     });
   }
+  /**
+   * Stops the server.
+   */
   destroy() {
     this.#bunserver.stop();
   }
+  /**
+   * Handles the HTTP request.
+   * @param {Request} request - HTTP request.
+   * @param {import('bun').Server} server - Bun server.
+   * @returns {Promise<Response>} -
+   */
   async #processRequest(request, server) {
     const { address: ip_address } = server.requestIP(request);
     const add_response_body = HTTP_METHOD_NO_RESPONSE_BODY.has(request.method) !== true;
@@ -196,24 +238,17 @@ var HyperAPIBunDriver = class extends import_core2.HyperAPIDriver {
         url,
         this.#multipart_formdata_enabled
       );
-      const hyperApiRequest = new import_core2.HyperAPIRequest(
+      const hyperApiRequest = new HyperAPIBunRequest(
         method,
-        args
+        args,
+        {
+          request,
+          url,
+          ip: new import_ip.IP(ip_address)
+        }
       );
-      hyperApiRequest.set(
-        "request",
-        request
-      );
-      hyperApiRequest.set(
-        "url",
-        url
-      );
-      hyperApiRequest.set(
-        "ip",
-        new import_ip.default(ip_address)
-      );
-      const hyperAPIResponse = await this.onRequest(hyperApiRequest);
-      if (hyperAPIResponse.error instanceof import_core2.HyperAPIError) {
+      const hyperAPIResponse = await this.processRequest(hyperApiRequest);
+      if (hyperAPIResponse.error instanceof import_core3.HyperAPIError) {
         throw hyperAPIResponse.error;
       }
       return new Response(
@@ -229,7 +264,7 @@ var HyperAPIBunDriver = class extends import_core2.HyperAPIDriver {
         }
       );
     } catch (error) {
-      if (error instanceof import_core2.HyperAPIError) {
+      if (error instanceof import_core3.HyperAPIError) {
         if (typeof error.httpStatus !== "number") {
           throw new TypeError('Property "httpStatus" of "HyperAPIError" must be a number.');
         }
@@ -240,7 +275,10 @@ var HyperAPIBunDriver = class extends import_core2.HyperAPIDriver {
         );
         if (error.httpHeaders) {
           for (const [header, value] of Object.entries(error.httpHeaders)) {
-            headers.append(header, value);
+            headers.append(
+              header,
+              value
+            );
           }
         }
         let body;

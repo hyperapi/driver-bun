@@ -1,14 +1,14 @@
 
 import {
 	HyperAPIDriver,
-	HyperAPIError,
-	HyperAPIRequest }  from '@hyperapi/core';
-import IP              from '@kirick/ip';
-import { HttpError }   from './libs/http-error.js';
+	HyperAPIError }           from '@hyperapi/core';
+import { IP }                 from '@kirick/ip';
+import { HttpError }          from './http-error.js';
 import {
 	parseAcceptHeader,
 	parseArguments,
-	parseResponseTo }  from './libs/parse.js';
+	parseResponseTo }         from './parse.js';
+import { HyperAPIBunRequest } from './request.js';
 
 const HTTP_METHOD_NO_RESPONSE_BODY = new Set([
 	'HEAD',
@@ -21,9 +21,15 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 
 	#bunserver;
 
+	/**
+	 * @param {object} options -
+	 * @param {string} [options.path] - Path to serve. Default: `/api/`.
+	 * @param {number} [options.port] - HTTP server port. Default: `8001`.
+	 * @param {boolean} [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
+	 */
 	constructor({
 		path = '/api/',
-		port,
+		port = 8001,
 		multipart_formdata_enabled = false,
 	}) {
 		if (typeof path !== 'string') {
@@ -45,10 +51,19 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		});
 	}
 
+	/**
+	 * Stops the server.
+	 */
 	destroy() {
 		this.#bunserver.stop();
 	}
 
+	/**
+	 * Handles the HTTP request.
+	 * @param {Request} request - HTTP request.
+	 * @param {import('bun').Server} server - Bun server.
+	 * @returns {Promise<Response>} -
+	 */
 	async #processRequest(request, server) {
 		// FIXME: doesn't work after async functions
 		const { address: ip_address } = server.requestIP(request);
@@ -80,24 +95,17 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 			// FIXME: doesn't work after async functions
 			// const { address: ip_address } = server.requestIP(request);
 
-			const hyperApiRequest = new HyperAPIRequest(
+			const hyperApiRequest = new HyperAPIBunRequest(
 				method,
 				args,
-			);
-			hyperApiRequest.set(
-				'request',
-				request,
-			);
-			hyperApiRequest.set(
-				'url',
-				url,
-			);
-			hyperApiRequest.set(
-				'ip',
-				new IP(ip_address),
+				{
+					request,
+					url,
+					ip: new IP(ip_address),
+				},
 			);
 
-			const hyperAPIResponse = await this.onRequest(hyperApiRequest);
+			const hyperAPIResponse = await this.processRequest(hyperApiRequest);
 			if (hyperAPIResponse.error instanceof HyperAPIError) {
 				throw hyperAPIResponse.error;
 			}
@@ -128,7 +136,10 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 				);
 				if (error.httpHeaders) {
 					for (const [ header, value ] of Object.entries(error.httpHeaders)) {
-						headers.append(header, value);
+						headers.append(
+							header,
+							value,
+						);
 					}
 				}
 

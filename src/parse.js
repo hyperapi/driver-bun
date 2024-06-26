@@ -1,25 +1,38 @@
 
 import { HyperAPIInvalidParametersError } from '@hyperapi/core';
 import {
-	decode,
-	encode }                              from 'cbor-x';
+	decode as decodeCbor,
+	encode as encodeCbor }                from 'cbor-x';
 import { HttpError }                      from './http-error.js';
 
+/**
+ * Gets only MIME type from Content-Type header, stripping parameters.
+ * @param {string} type - MIME type.
+ * @returns {string} - MIME type.
+ */
 function getMIME(type) {
-	if (typeof type === 'string') {
-		const index = type.indexOf(';');
-		if (index !== -1) {
-			return type.slice(0, index);
-		}
+	const index = type.indexOf(';');
+	if (index !== -1) {
+		return type.slice(0, index);
 	}
 
 	return type;
 }
 
+/**
+ * Parses arguments from request.
+ * @param {Request} request - Request object.
+ * @param {URL} url - URL object.
+ * @param {boolean} multipart_formdata_enabled - Whether to enable multipart/form-data parsing.
+ * @returns {Promise<Record<string, any>>} - Arguments.
+ */
 export async function parseArguments(request, url, multipart_formdata_enabled) {
 	let args = {};
 
-	if (request.method === 'GET' || request.method === 'HEAD') {
+	if (
+		request.method === 'GET'
+		|| request.method === 'HEAD'
+	) {
 		args = Object.fromEntries(
 			url.searchParams.entries(),
 		);
@@ -66,8 +79,10 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 				break;
 			case 'application/cbor':
 				try {
-					args = decode(
-						await request.arrayBuffer(),
+					args = decodeCbor(
+						new Uint8Array(
+							await request.arrayBuffer(),
+						),
 					);
 				}
 				catch {
@@ -82,6 +97,11 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 	return args;
 }
 
+/**
+ * Parses accept header to determine response format.
+ * @param {string} header - Accept header.
+ * @returns {'json' | 'cbor'} - Response format.
+ */
 export function parseAcceptHeader(header) {
 	if (typeof header === 'string') {
 		for (const type of header.split(',')) {
@@ -99,12 +119,20 @@ export function parseAcceptHeader(header) {
 	return 'json';
 }
 
+/**
+ * Parses response to specified format.
+ * @param {'json' | 'cbor'} format - Response format.
+ * @param {any} body - Response body.
+ * @returns {string | Buffer} - Parsed response.
+ */
 export function parseResponseTo(format, body) {
 	if (format === 'json') {
 		return JSON.stringify(body);
 	}
-	if (format === 'cbor') {
-		return encode(body);
-	}
-}
 
+	if (format === 'cbor') {
+		return encodeCbor(body);
+	}
+
+	throw new TypeError('Invalid response format given.');
+}

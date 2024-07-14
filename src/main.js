@@ -66,12 +66,16 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 	 */
 	async #processRequest(request, server) {
 		// FIXME: doesn't work after async functions
-		const { address: ip_address } = server.requestIP(request);
+		const socket_address = server.requestIP(request);
+		if (socket_address === null) {
+			throw new Error('Cannot get IP address from request.');
+		}
 
 		const add_response_body = HTTP_METHOD_NO_RESPONSE_BODY.has(request.method) !== true;
 		const url = new URL(request.url);
 
-		let preffered_format;
+		/** @type {'json' | 'cbor'} */
+		let preffered_format = 'json';
 
 		try {
 			if (url.pathname.startsWith(this.#path) !== true) {
@@ -101,7 +105,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 				{
 					request,
 					url,
-					ip: new IP(ip_address),
+					ip: new IP(socket_address.address),
 				},
 			);
 
@@ -168,3 +172,5 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		}
 	}
 }
+
+export { HyperAPIBunRequest } from './request.js';

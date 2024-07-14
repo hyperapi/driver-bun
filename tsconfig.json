@@ -1,10 +1,13 @@
 {
 	"compilerOptions": {
-		"target": "es2022",
-		"noImplicitAny": true,
+		"outDir": "dist/",
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
 		"checkJs": true,
-		"allowJs": true,
-		"moduleResolution": "node"
+		"allowJs": true
 	},
 	"include": [
 		"src/**/*"

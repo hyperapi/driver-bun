@@ -40,7 +40,11 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 	else if (request.body) {
 		const type_header = request.headers.get('Content-Type');
 
-		switch (getMIME(type_header)) {
+		switch (
+			type_header === null
+				? null
+				: getMIME(type_header)
+		) {
 			case 'application/json':
 				try {
 					args = await request.json();
@@ -99,7 +103,7 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 
 /**
  * Parses accept header to determine response format.
- * @param {string} header - Accept header.
+ * @param {string | null} header - Accept header.
  * @returns {'json' | 'cbor'} - Response format.
  */
 export function parseAcceptHeader(header) {

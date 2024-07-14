@@ -8,10 +8,10 @@
 export function parseArguments(request: Request, url: URL, multipart_formdata_enabled: boolean): Promise<Record<string, any>>;
 /**
  * Parses accept header to determine response format.
- * @param {string} header - Accept header.
+ * @param {string | null} header - Accept header.
  * @returns {'json' | 'cbor'} - Response format.
  */
-export function parseAcceptHeader(header: string): "json" | "cbor";
+export function parseAcceptHeader(header: string | null): "json" | "cbor";
 /**
  * Parses response to specified format.
  * @param {'json' | 'cbor'} format - Response format.

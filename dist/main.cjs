@@ -1,3 +1,4 @@
+"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -19,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/main.js
 var main_exports = {};
 __export(main_exports, {
+  HyperAPIBunRequest: () => HyperAPIBunRequest,
   default: () => HyperAPIBunDriver
 });
 module.exports = __toCommonJS(main_exports);
@@ -68,7 +70,7 @@ async function parseArguments(request, url, multipart_formdata_enabled) {
     );
   } else if (request.body) {
     const type_header = request.headers.get("Content-Type");
-    switch (getMIME(type_header)) {
+    switch (type_header === null ? null : getMIME(type_header)) {
       case "application/json":
         try {
           args = await request.json();
@@ -219,10 +221,13 @@ var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
    * @returns {Promise<Response>} -
    */
   async #processRequest(request, server) {
-    const { address: ip_address } = server.requestIP(request);
+    const socket_address = server.requestIP(request);
+    if (socket_address === null) {
+      throw new Error("Cannot get IP address from request.");
+    }
     const add_response_body = HTTP_METHOD_NO_RESPONSE_BODY.has(request.method) !== true;
     const url = new URL(request.url);
-    let preffered_format;
+    let preffered_format = "json";
     try {
       if (url.pathname.startsWith(this.#path) !== true) {
         throw new HttpError(404);
@@ -244,7 +249,7 @@ var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
         {
           request,
           url,
-          ip: new import_ip.IP(ip_address)
+          ip: new import_ip.IP(socket_address.address)
         }
       );
       const hyperAPIResponse = await this.processRequest(hyperApiRequest);
@@ -303,3 +308,7 @@ var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
     }
   }
 };
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  HyperAPIBunRequest
+});

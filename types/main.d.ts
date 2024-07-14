@@ -6,9 +6,9 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
      * @param {boolean} [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
      */
     constructor({ path, port, multipart_formdata_enabled, }: {
-        path?: string;
-        port?: number;
-        multipart_formdata_enabled?: boolean;
+        path?: string | undefined;
+        port?: number | undefined;
+        multipart_formdata_enabled?: boolean | undefined;
     });
     /**
      * Stops the server.
@@ -16,4 +16,5 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
     destroy(): void;
     #private;
 }
+export { HyperAPIBunRequest } from "./request.js";
 import { HyperAPIDriver } from '@hyperapi/core';

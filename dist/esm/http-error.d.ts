@@ -1,12 +1,12 @@
-export class HttpError extends Error {
+export declare class HttpError extends Error {
+    #private;
     /**
-     * @param {number} status - HTTP status code.
+     * @param status - HTTP status code.
      */
     constructor(status: number);
     /**
      * Creates a Response from the error.
-     * @returns {Response} -
+     * @returns -
      */
     getResponse(): Response;
-    #private;
 }

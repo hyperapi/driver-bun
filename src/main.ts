@@ -1,40 +1,48 @@
-
+import { type Server }        from 'bun';
 import {
 	HyperAPIDriver,
-	HyperAPIError }           from '@hyperapi/core';
+	HyperAPIError,
+}                             from '@hyperapi/core';
 import { IP }                 from '@kirick/ip';
-import { HttpError }          from './http-error.js';
+import { HttpError }          from './http-error';
 import {
 	parseAcceptHeader,
 	parseArguments,
-	parseResponseTo }         from './parse.js';
-import { HyperAPIBunRequest } from './request.js';
+	parseResponseTo,
+}                             from './parse';
+import { HyperAPIBunRequest } from './request';
 
 const HTTP_METHOD_NO_RESPONSE_BODY = new Set([
 	'HEAD',
 	'OPTIONS',
 ]);
 
-export default class HyperAPIBunDriver extends HyperAPIDriver {
-	#path;
-	#multipart_formdata_enabled;
+export type ResponseFormat = 'json' | 'cbor';
 
-	#bunserver;
+export class HyperAPIBunDriver extends HyperAPIDriver {
+	#path: string;
+	#multipart_formdata_enabled: boolean = false;
+	#bunserver: Server;
 
 	/**
-	 * @param {object} options -
-	 * @param {string} [options.path] - Path to serve. Default: `/api/`.
-	 * @param {number} [options.port] - HTTP server port. Default: `8001`.
-	 * @param {boolean} [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
+	 * @param options -
+	 * @param [options.path] - Path to serve. Default: `/api/`.
+	 * @param [options.port] - HTTP server port. Default: `8001`.
+	 * @param [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
 	 */
 	constructor({
 		path = '/api/',
 		port = 8001,
 		multipart_formdata_enabled = false,
+	}: {
+		path?: string,
+		port?: number,
+		multipart_formdata_enabled?: boolean,
 	}) {
 		if (typeof path !== 'string') {
 			throw new TypeError('Property "path" must be a string.');
 		}
+
 		if (typeof port !== 'number') {
 			throw new TypeError('Property "port" must be a number.');
 		}
@@ -47,7 +55,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		this.#bunserver = Bun.serve({
 			development: false,
 			port,
-			fetch: async (request, server) => this.#processRequest(request, server),
+			fetch: (request, server) => this.#processRequest(request, server),
 		});
 	}
 
@@ -60,11 +68,14 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 
 	/**
 	 * Handles the HTTP request.
-	 * @param {Request} request - HTTP request.
-	 * @param {import('bun').Server} server - Bun server.
-	 * @returns {Promise<Response>} -
+	 * @param request - HTTP request.
+	 * @param server - Bun server.
+	 * @returns -
 	 */
-	async #processRequest(request, server) {
+	async #processRequest(
+		request: Request,
+		server: Server,
+	): Promise<Response> {
 		// FIXME: doesn't work after async functions
 		const socket_address = server.requestIP(request);
 		if (socket_address === null) {
@@ -74,8 +85,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 		const add_response_body = HTTP_METHOD_NO_RESPONSE_BODY.has(request.method) !== true;
 		const url = new URL(request.url);
 
-		/** @type {'json' | 'cbor'} */
-		let preffered_format = 'json';
+		let preffered_format: ResponseFormat = 'json';
 
 		try {
 			if (url.pathname.startsWith(this.#path) !== true) {
@@ -92,7 +102,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 
 			const args = await parseArguments(
 				request,
-				url,
+				url as URL,
 				this.#multipart_formdata_enabled,
 			);
 
@@ -104,7 +114,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 				args,
 				{
 					request,
-					url,
+					url: url as URL,
 					ip: new IP(socket_address.address),
 				},
 			);
@@ -122,7 +132,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 				{
 					status: 200,
 					headers: {
-						'Content-Type': 'application/' + preffered_format,
+						'Content-Type': `application/${preffered_format}`,
 					},
 				},
 			);
@@ -136,7 +146,7 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 				const headers = new Headers();
 				headers.append(
 					'Content-Type',
-					'application/' + preffered_format,
+					`application/${preffered_format}`,
 				);
 				if (error.httpHeaders) {
 					for (const [ header, value ] of Object.entries(error.httpHeaders)) {
@@ -173,4 +183,4 @@ export default class HyperAPIBunDriver extends HyperAPIDriver {
 	}
 }
 
-export { HyperAPIBunRequest } from './request.js';
+export { HyperAPIBunRequest } from './request';

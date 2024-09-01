@@ -1,21 +1,19 @@
-
 export class HttpError extends Error {
-	/** @type {number} */
-	#status;
+	#status: number;
 
 	/**
-	 * @param {number} status - HTTP status code.
+	 * @param status - HTTP status code.
 	 */
-	constructor(status) {
+	constructor(status: number) {
 		super('');
 		this.#status = status;
 	}
 
 	/**
 	 * Creates a Response from the error.
-	 * @returns {Response} -
+	 * @returns -
 	 */
-	getResponse() {
+	getResponse(): Response {
 		return new Response(
 			'',
 			{

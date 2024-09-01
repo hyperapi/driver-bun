@@ -1,20 +1,26 @@
 {
-	"compilerOptions": {
-		"outDir": "dist/",
-		"target": "esnext",
-		"module": "esnext",
-		"moduleResolution": "node",
-		"allowSyntheticDefaultImports": true,
-		"strict": true,
-		"checkJs": true,
-		"allowJs": true
-	},
+	"compileOnSave": false,
 	"include": [
-		"src/**/*"
+		"src/"
 	],
 	"exclude": [
-		"node_modules/",
 		"dist/",
-		"**/*.test.js"
-	]
+		"node_modules/"
+	],
+	"compilerOptions": {
+		"outDir": "dist/esm",
+		"declaration": true,
+		"declarationDir": "dist/esm",
+		"target": "esnext",
+		"module": "esnext",
+		"lib": [
+			"ESNext",
+			"ES2021.String"
+		],
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"removeComments": false
+	}
 }

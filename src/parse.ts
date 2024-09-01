@@ -2,15 +2,17 @@
 import { HyperAPIInvalidParametersError } from '@hyperapi/core';
 import {
 	decode as decodeCbor,
-	encode as encodeCbor }                from 'cbor-x';
-import { HttpError }                      from './http-error.js';
+	encode as encodeCbor,
+}                                         from 'cbor-x';
+import { HttpError }                      from './http-error';
+import { ResponseFormat }                 from './main';
 
 /**
  * Gets only MIME type from Content-Type header, stripping parameters.
- * @param {string} type - MIME type.
- * @returns {string} - MIME type.
+ * @param  type - MIME type.
+ * @returns  - MIME type.
  */
-function getMIME(type) {
+function getMIME(type: string): string {
 	const index = type.indexOf(';');
 	if (index !== -1) {
 		return type.slice(0, index);
@@ -19,15 +21,21 @@ function getMIME(type) {
 	return type;
 }
 
+type RequestArgs = Record<string, unknown>;
+
 /**
  * Parses arguments from request.
- * @param {Request} request - Request object.
- * @param {URL} url - URL object.
- * @param {boolean} multipart_formdata_enabled - Whether to enable multipart/form-data parsing.
- * @returns {Promise<Record<string, any>>} - Arguments.
+ * @param  request - Request object.
+ * @param  url - URL object.
+ * @param  multipart_formdata_enabled - Whether to enable multipart/form-data parsing.
+ * @returns - Arguments.
  */
-export async function parseArguments(request, url, multipart_formdata_enabled) {
-	let args = {};
+export async function parseArguments(
+	request: Request,
+	url: URL,
+	multipart_formdata_enabled: boolean,
+): Promise<RequestArgs> {
+	let args: RequestArgs = {};
 
 	if (
 		request.method === 'GET'
@@ -47,12 +55,14 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 		) {
 			case 'application/json':
 				try {
+					// @ts-expect-error - ignore possible array
 					args = await request.json();
 				}
 				catch {
 					throw new HyperAPIInvalidParametersError();
 				}
 				break;
+
 			case 'multipart/form-data':
 				if (multipart_formdata_enabled !== true) {
 					throw new HttpError(415);
@@ -65,10 +75,12 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 					);
 				}
 				catch (error) {
+					// eslint-disable-next-line no-console
 					console.error(error);
 					throw new HyperAPIInvalidParametersError();
 				}
 				break;
+
 			case 'application/x-www-form-urlencoded':
 				try {
 					args = Object.fromEntries(
@@ -81,6 +93,7 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 					throw new HyperAPIInvalidParametersError();
 				}
 				break;
+
 			case 'application/cbor':
 				try {
 					args = decodeCbor(
@@ -93,6 +106,7 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 					throw new HyperAPIInvalidParametersError();
 				}
 				break;
+
 			default:
 				throw new HttpError(415);
 		}
@@ -103,16 +117,18 @@ export async function parseArguments(request, url, multipart_formdata_enabled) {
 
 /**
  * Parses accept header to determine response format.
- * @param {string | null} header - Accept header.
- * @returns {'json' | 'cbor'} - Response format.
+ * @param header - Accept header.
+ * @returns - Response format.
  */
-export function parseAcceptHeader(header) {
+export function parseAcceptHeader(header: string | null): ResponseFormat {
 	if (typeof header === 'string') {
 		for (const type of header.split(',')) {
 			switch (getMIME(type.trim())) {
 				case 'application/json':
+				// eslint-disable-next-line @stylistic/padding-line-between-statements, no-fallthrough
 				case 'application/*':
 					return 'json';
+
 				case 'application/cbor':
 					return 'cbor';
 				// no default
@@ -125,11 +141,14 @@ export function parseAcceptHeader(header) {
 
 /**
  * Parses response to specified format.
- * @param {'json' | 'cbor'} format - Response format.
- * @param {any} body - Response body.
- * @returns {string | Buffer} - Parsed response.
+ * @param format - Response format.
+ * @param body - Response body.
+ * @returns - Parsed response.
  */
-export function parseResponseTo(format, body) {
+export function parseResponseTo(
+	format: ResponseFormat,
+	body: unknown,
+): string | Buffer {
 	if (format === 'json') {
 		return JSON.stringify(body);
 	}

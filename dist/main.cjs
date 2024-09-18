@@ -161,7 +161,7 @@ var HyperAPIBunDriver = class {
   port;
   path;
   multipart_formdata_enabled;
-  bunserver = null;
+  server = null;
   /**
    * @param options -
    * @param options.port - HTTP server port. Default: `8001`.
@@ -183,7 +183,7 @@ var HyperAPIBunDriver = class {
    */
   start(handler) {
     this.handler = handler;
-    this.bunserver = Bun.serve({
+    this.server = Bun.serve({
       development: false,
       port: this.port,
       fetch: async (request, server) => {
@@ -208,7 +208,7 @@ var HyperAPIBunDriver = class {
   }
   /** Stops the server. */
   stop() {
-    this.bunserver?.stop();
+    this.server?.stop();
   }
   /**
    * Handles the HTTP request.

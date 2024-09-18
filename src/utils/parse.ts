@@ -1,5 +1,5 @@
 import { HyperAPIInvalidParametersError } from '@hyperapi/core';
-import { isRecord } from './is-record';
+import { isRecord } from './is-record.js';
 
 /**
  * Gets only MIME type from Content-Type header, stripping parameters.

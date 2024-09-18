@@ -3,7 +3,7 @@ import {
 	expect,
 	test,
 } from 'bun:test';
-import '../test/setup';
+import '../test/setup.js';
 
 describe('args', () => {
 	test('GET', async () => {

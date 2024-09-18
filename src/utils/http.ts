@@ -5,7 +5,7 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTION
  * @param http_method The HTTP method to check.
  * @returns -
  */
-export function isHttpMethodSupported(http_method: string): http_method is HttpMethod {
+export function isHttpMethodSupported(http_method: unknown): http_method is HttpMethod {
 	return http_method === 'GET'
 		|| http_method === 'POST'
 		|| http_method === 'PUT'
@@ -20,7 +20,7 @@ export function isHttpMethodSupported(http_method: string): http_method is HttpM
  * @param http_method The HTTP method to check.
  * @returns -
  */
-export function isResponseBodyRequired(http_method: string): http_method is Exclude<HttpMethod, 'HEAD' | 'OPTIONS'> {
+export function isResponseBodyRequired(http_method: unknown): http_method is Exclude<HttpMethod, 'HEAD' | 'OPTIONS'> {
 	return http_method !== 'HEAD'
 		&& http_method !== 'OPTIONS';
 }

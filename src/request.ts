@@ -1,4 +1,3 @@
-
 import type { HyperAPIRequest } from '@hyperapi/core';
 import type { IP }              from '@kirick/ip';
 

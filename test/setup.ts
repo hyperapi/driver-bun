@@ -1,5 +1,5 @@
 import { HyperAPI } from '@hyperapi/core';
-import { HyperAPIBunDriver } from '../src/main';
+import { HyperAPIBunDriver } from '../src/main.js';
 
 export const hyperApi = new HyperAPI({
 	driver: new HyperAPIBunDriver({

@@ -5,13 +5,19 @@ import {
 	type HyperAPIDriverHandler,
 } from '@hyperapi/core';
 import { IP } from '@kirick/ip';
-import { parseArguments } from './utils/parse';
-import { type HyperAPIBunRequest } from './request';
-import { hyperApiErrorToResponse } from './utils/hyperapi-error';
+import { parseArguments } from './utils/parse.js';
+import { type HyperAPIBunRequest } from './request.js';
+import { hyperApiErrorToResponse } from './utils/hyperapi-error.js';
 import {
 	isHttpMethodSupported,
 	isResponseBodyRequired,
-} from './utils/http';
+} from './utils/http.js';
+
+interface Config {
+	port: number;
+	path?: string;
+	multipart_formdata_enabled?: boolean;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>> {
@@ -20,7 +26,7 @@ export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>
 	private port: number;
 	private path: string;
 	private multipart_formdata_enabled: boolean;
-	private bunserver: Server | null = null;
+	private server: Server | null = null;
 
 	/**
 	 * @param options -
@@ -32,11 +38,7 @@ export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>
 		port,
 		path = '/api/',
 		multipart_formdata_enabled = false,
-	}: {
-		port: number,
-		path?: string,
-		multipart_formdata_enabled?: boolean,
-	}) {
+	}: Config) {
 		this.port = port;
 		this.path = path;
 		this.multipart_formdata_enabled = multipart_formdata_enabled;
@@ -48,7 +50,7 @@ export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>
 	 */
 	start(handler: HyperAPIDriverHandler<HyperAPIBunRequest>) {
 		this.handler = handler;
-		this.bunserver = Bun.serve({
+		this.server = Bun.serve({
 			development: false,
 			port: this.port,
 			fetch: async (request, server) => {
@@ -79,7 +81,7 @@ export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>
 
 	/** Stops the server. */
 	stop() {
-		this.bunserver?.stop();
+		this.server?.stop();
 	}
 
 	/**
@@ -158,4 +160,4 @@ export class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>
 	}
 }
 
-export { type HyperAPIBunRequest } from './request';
+export { type HyperAPIBunRequest } from './request.js';

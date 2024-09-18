@@ -1,21 +1,35 @@
-import { HyperAPIDriver } from '@hyperapi/core';
-export type ResponseFormat = 'json' | 'cbor';
-export declare class HyperAPIBunDriver extends HyperAPIDriver {
-    #private;
+import { type HyperAPIDriver, type HyperAPIDriverHandler } from '@hyperapi/core';
+import { type HyperAPIBunRequest } from './request';
+export declare class HyperAPIBunDriver implements HyperAPIDriver<HyperAPIBunRequest<any>> {
+    private handler;
+    private port;
+    private path;
+    private multipart_formdata_enabled;
+    private bunserver;
     /**
      * @param options -
+     * @param options.port - HTTP server port. Default: `8001`.
      * @param [options.path] - Path to serve. Default: `/api/`.
-     * @param [options.port] - HTTP server port. Default: `8001`.
      * @param [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
      */
-    constructor({ path, port, multipart_formdata_enabled, }: {
+    constructor({ port, path, multipart_formdata_enabled, }: {
+        port: number;
         path?: string;
-        port?: number;
         multipart_formdata_enabled?: boolean;
     });
     /**
-     * Stops the server.
+     * Starts the server.
+     * @param handler - The handler to use.
      */
-    destroy(): void;
+    start(handler: HyperAPIDriverHandler<HyperAPIBunRequest>): void;
+    /** Stops the server. */
+    stop(): void;
+    /**
+     * Handles the HTTP request.
+     * @param request - HTTP request.
+     * @param server - Bun server.
+     * @returns -
+     */
+    private processRequest;
 }
-export { HyperAPIBunRequest } from './request';
+export { type HyperAPIBunRequest } from './request';

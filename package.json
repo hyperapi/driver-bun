@@ -1,6 +1,6 @@
 {
 	"name": "@hyperapi/driver-bun",
-	"version": "0.2.0-beta.4",
+	"version": "0.3.0-beta.1",
 	"description": "HyperAPI HTTP driver for Bun.",
 	"publishConfig": {
 		"access": "public"
@@ -18,25 +18,23 @@
 		"node": ">=21"
 	},
 	"dependencies": {
-		"@hyperapi/core": "^0.2.0-beta.3",
-		"@kirick/ip": "^0.1.1-beta.5",
+		"@hyperapi/core": "^0.3.0-beta.2",
+		"@kirick/ip": "^0.1.1",
 		"cbor-x": "1.5.4"
 	},
 	"devDependencies": {
 		"@kirick/eslint-config": "latest",
 		"@types/bun": "^1.1.8",
-		"eslint": "9.8.0",
-		"typescript": "5.5.4",
-		"vitest": "1.3.1"
+		"eslint": "9.10.0",
+		"typescript": "5.5.4"
 	},
 	"scripts": {
 		"build": "bun run build:ts && bun run build:cjs",
-		"build:cjs": "bunx esbuild --bundle --platform=node --format=cjs --packages=external --outfile=dist/main.cjs dist/esm/main.js",
+		"build:cjs": "bunx esbuild --bundle --platform=node --format=cjs --packages=external --outfile=dist/main.cjs src/main.ts",
 		"build:ts": "rm -rf dist/esm dist/types ; tsc",
 		"lint": "eslint . && tsc --skipLibCheck --noemit",
 		"publish:npm": "bun run build && bun run lint && bun run test && npm publish",
-		"test": "npm run test:vitest && bun test --coverage",
-		"test:vitest": "vitest run --no-file-parallelism"
+		"test": "bun test --coverage"
 	},
 	"repository": {
 		"type": "git",
@@ -47,6 +45,7 @@
 		"api",
 		"driver",
 		"hyperapi-driver",
+		"http",
 		"bun"
 	],
 	"author": "Daniil Kirichenko (https://twitter.com/kirickme)",

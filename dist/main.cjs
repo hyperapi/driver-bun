@@ -17,175 +17,198 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// dist/esm/main.js
+// src/main.ts
 var main_exports = {};
 __export(main_exports, {
-  HyperAPIBunDriver: () => HyperAPIBunDriver,
-  HyperAPIBunRequest: () => HyperAPIBunRequest
+  HyperAPIBunDriver: () => HyperAPIBunDriver
 });
 module.exports = __toCommonJS(main_exports);
-var import_core3 = require("@hyperapi/core");
+var import_core2 = require("@hyperapi/core");
 var import_ip = require("@kirick/ip");
 
-// dist/esm/http-error.js
-var HttpError = class extends Error {
-  #status;
-  /**
-   * @param status - HTTP status code.
-   */
-  constructor(status) {
-    super("");
-    this.#status = status;
-  }
-  /**
-   * Creates a Response from the error.
-   * @returns -
-   */
-  getResponse() {
-    return new Response("", {
-      status: this.#status
-    });
-  }
-};
-
-// dist/esm/parse.js
+// src/utils/parse.ts
 var import_core = require("@hyperapi/core");
-var import_cbor_x = require("cbor-x");
+
+// src/utils/is-record.ts
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && value.constructor === Object && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+// src/utils/parse.ts
 function getMIME(type) {
   const index = type.indexOf(";");
   if (index !== -1) {
-    return type.slice(0, index);
+    return type.slice(0, index).trim();
   }
-  return type;
+  return type.trim();
 }
+var HyperAPIBodyInvalidError = class extends import_core.HyperAPIInvalidParametersError {
+  data = {
+    message: "Could not parse body"
+  };
+  httpStatus = 400;
+  constructor(message) {
+    super();
+    if (message) {
+      this.data.message = message;
+    }
+  }
+};
+var HyperAPIBodyUnknownError = class extends import_core.HyperAPIInvalidParametersError {
+  data = {
+    message: "Unsupported body type"
+  };
+  httpStatus = 415;
+  constructor(mime) {
+    super();
+    this.data.message = `Unsupported body type: ${mime}`;
+  }
+};
 async function parseArguments(request, url, multipart_formdata_enabled) {
   let args = {};
   if (request.method === "GET" || request.method === "HEAD") {
-    args = Object.fromEntries(url.searchParams.entries());
+    args = Object.fromEntries(
+      url.searchParams.entries()
+    );
   } else if (request.body) {
     const type_header = request.headers.get("Content-Type");
-    switch (type_header === null ? null : getMIME(type_header)) {
+    const type_mime = type_header === null ? "<no Content-Type header provided>" : getMIME(type_header);
+    switch (type_mime) {
       case "application/json":
-        try {
-          args = await request.json();
-        } catch {
-          throw new import_core.HyperAPIInvalidParametersError();
+        {
+          let args_json;
+          try {
+            args_json = await request.json();
+          } catch {
+            throw new HyperAPIBodyInvalidError();
+          }
+          if (isRecord(args_json) !== true) {
+            throw new HyperAPIBodyInvalidError("JSON body must be an object.");
+          }
+          args = args_json;
         }
         break;
       case "multipart/form-data":
         if (multipart_formdata_enabled !== true) {
-          throw new HttpError(415);
+          throw new HyperAPIBodyUnknownError(type_mime);
         }
         try {
           const formdata = await request.formData();
-          args = Object.fromEntries(formdata.entries());
-        } catch (error) {
-          console.error(error);
+          args = Object.fromEntries(
+            formdata.entries()
+          );
+        } catch {
           throw new import_core.HyperAPIInvalidParametersError();
         }
         break;
       case "application/x-www-form-urlencoded":
         try {
-          args = Object.fromEntries(new URLSearchParams(await request.text()));
-        } catch {
-          throw new import_core.HyperAPIInvalidParametersError();
-        }
-        break;
-      case "application/cbor":
-        try {
-          args = (0, import_cbor_x.decode)(new Uint8Array(await request.arrayBuffer()));
+          args = Object.fromEntries(
+            new URLSearchParams(
+              await request.text()
+            )
+          );
         } catch {
           throw new import_core.HyperAPIInvalidParametersError();
         }
         break;
       default:
-        throw new HttpError(415);
+        throw new HyperAPIBodyUnknownError(type_mime);
     }
   }
   return args;
 }
-function parseAcceptHeader(header) {
-  if (typeof header === "string") {
-    for (const type of header.split(",")) {
-      switch (getMIME(type.trim())) {
-        case "application/json":
-        case "application/*":
-          return "json";
-        case "application/cbor":
-          return "cbor";
-      }
+
+// src/utils/hyperapi-error.ts
+function hyperApiErrorToResponse(error, add_body) {
+  if (typeof error.httpStatus !== "number") {
+    console.warn(`No HTTP status code provided for error ${error.name}, using 500.`);
+  }
+  const headers = new Headers();
+  headers.set("Content-Type", "application/json");
+  if (error.httpHeaders) {
+    for (const [header, value] of Object.entries(error.httpHeaders)) {
+      headers.set(header, value);
     }
   }
-  return "json";
-}
-function parseResponseTo(format, body) {
-  if (format === "json") {
-    return JSON.stringify(body);
+  let body;
+  if (add_body) {
+    body = JSON.stringify(
+      error.getResponse()
+    );
   }
-  if (format === "cbor") {
-    return (0, import_cbor_x.encode)(body);
-  }
-  throw new TypeError("Invalid response format given.");
+  return new Response(
+    body,
+    {
+      status: error.httpStatus ?? 500,
+      headers
+    }
+  );
 }
 
-// dist/esm/request.js
-var import_core2 = require("@hyperapi/core");
-var HyperAPIBunRequest = class extends import_core2.HyperAPIRequest {
-  request;
-  url;
-  ip;
-  /**
-   * @param module_path -
-   * @param args -
-   * @param data -
-   * @param data.request -
-   * @param data.url -
-   * @param data.ip -
-   */
-  constructor(module_path, args, { request, url, ip }) {
-    super(module_path, args);
-    this.request = request;
-    this.url = url;
-    this.ip = ip;
-  }
-};
+// src/utils/http.ts
+function isHttpMethodSupported(http_method) {
+  return http_method === "GET" || http_method === "POST" || http_method === "PUT" || http_method === "PATCH" || http_method === "DELETE" || http_method === "HEAD" || http_method === "OPTIONS";
+}
+function isResponseBodyRequired(http_method) {
+  return http_method !== "HEAD" && http_method !== "OPTIONS";
+}
 
-// dist/esm/main.js
-var HTTP_METHOD_NO_RESPONSE_BODY = /* @__PURE__ */ new Set([
-  "HEAD",
-  "OPTIONS"
-]);
-var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
-  #path;
-  #multipart_formdata_enabled = false;
-  #bunserver;
+// src/main.ts
+var HyperAPIBunDriver = class {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler = null;
+  port;
+  path;
+  multipart_formdata_enabled;
+  bunserver = null;
   /**
    * @param options -
+   * @param options.port - HTTP server port. Default: `8001`.
    * @param [options.path] - Path to serve. Default: `/api/`.
-   * @param [options.port] - HTTP server port. Default: `8001`.
    * @param [options.multipart_formdata_enabled] - If `true`, server would parse `multipart/form-data` requests. Default: `false`.
    */
-  constructor({ path = "/api/", port = 8001, multipart_formdata_enabled = false }) {
-    if (typeof path !== "string") {
-      throw new TypeError('Property "path" must be a string.');
-    }
-    if (typeof port !== "number") {
-      throw new TypeError('Property "port" must be a number.');
-    }
-    super();
-    this.#multipart_formdata_enabled = multipart_formdata_enabled;
-    this.#path = path;
-    this.#bunserver = Bun.serve({
-      development: false,
-      port,
-      fetch: (request, server) => this.#processRequest(request, server)
-    });
+  constructor({
+    port,
+    path = "/api/",
+    multipart_formdata_enabled = false
+  }) {
+    this.port = port;
+    this.path = path;
+    this.multipart_formdata_enabled = multipart_formdata_enabled;
   }
   /**
-   * Stops the server.
+   * Starts the server.
+   * @param handler - The handler to use.
    */
-  destroy() {
-    this.#bunserver.stop();
+  start(handler) {
+    this.handler = handler;
+    this.bunserver = Bun.serve({
+      development: false,
+      port: this.port,
+      fetch: async (request, server) => {
+        try {
+          return await this.processRequest(request, server);
+        } catch (error) {
+          if (error instanceof import_core2.HyperAPIError) {
+            return hyperApiErrorToResponse(
+              error,
+              isResponseBodyRequired(request.method)
+            );
+          }
+          console.error("Unhandled error in @hyperapi/driver-bun:");
+          console.error(error);
+          return new Response(
+            void 0,
+            { status: 500 }
+          );
+        }
+      }
+    });
+  }
+  /** Stops the server. */
+  stop() {
+    this.bunserver?.stop();
   }
   /**
    * Handles the HTTP request.
@@ -193,66 +216,59 @@ var HyperAPIBunDriver = class extends import_core3.HyperAPIDriver {
    * @param server - Bun server.
    * @returns -
    */
-  async #processRequest(request, server) {
+  async processRequest(request, server) {
+    if (!this.handler) {
+      throw new Error("No handler available.");
+    }
     const socket_address = server.requestIP(request);
     if (socket_address === null) {
       throw new Error("Cannot get IP address from request.");
     }
-    const add_response_body = HTTP_METHOD_NO_RESPONSE_BODY.has(request.method) !== true;
+    const http_method = request.method;
+    if (isHttpMethodSupported(http_method) !== true) {
+      return new Response(
+        void 0,
+        { status: 405 }
+      );
+    }
     const url = new URL(request.url);
-    let preffered_format = "json";
-    try {
-      if (url.pathname.startsWith(this.#path) !== true) {
-        throw new HttpError(404);
-      }
-      const method = url.pathname.slice(this.#path.length);
-      preffered_format = parseAcceptHeader(request.headers.get("Accept"));
-      const args = await parseArguments(request, url, this.#multipart_formdata_enabled);
-      const hyperApiRequest = new HyperAPIBunRequest(method, args, {
-        request,
-        url,
-        ip: new import_ip.IP(socket_address.address)
-      });
-      const hyperAPIResponse = await this.processRequest(hyperApiRequest);
-      if (hyperAPIResponse.error instanceof import_core3.HyperAPIError) {
-        throw hyperAPIResponse.error;
-      }
-      return new Response(parseResponseTo(preffered_format, hyperAPIResponse.getResponse()), {
+    if (url.pathname.startsWith(this.path) !== true) {
+      return new Response(
+        void 0,
+        { status: 404 }
+      );
+    }
+    const hyperapi_method = url.pathname.slice(
+      this.path.length
+    );
+    const hyperapi_args = await parseArguments(
+      request,
+      url,
+      this.multipart_formdata_enabled
+    );
+    const hyperapi_response = await this.handler({
+      method: http_method,
+      path: hyperapi_method,
+      args: hyperapi_args,
+      url,
+      headers: Object.fromEntries(request.headers),
+      ip: new import_ip.IP(socket_address.address)
+    });
+    if (hyperapi_response instanceof import_core2.HyperAPIError) {
+      throw hyperapi_response;
+    }
+    return new Response(
+      isResponseBodyRequired(http_method) ? JSON.stringify(hyperapi_response) : void 0,
+      {
         status: 200,
         headers: {
-          "Content-Type": `application/${preffered_format}`
+          "Content-Type": "application/json"
         }
-      });
-    } catch (error) {
-      if (error instanceof import_core3.HyperAPIError) {
-        if (typeof error.httpStatus !== "number") {
-          throw new TypeError('Property "httpStatus" of "HyperAPIError" must be a number.');
-        }
-        const headers = new Headers();
-        headers.append("Content-Type", `application/${preffered_format}`);
-        if (error.httpHeaders) {
-          for (const [header, value] of Object.entries(error.httpHeaders)) {
-            headers.append(header, value);
-          }
-        }
-        let body;
-        if (add_response_body) {
-          body = parseResponseTo(preffered_format, error.getResponse());
-        }
-        return new Response(body, {
-          status: error.httpStatus,
-          headers
-        });
       }
-      if (error instanceof HttpError) {
-        return error.getResponse();
-      }
-      return new HttpError(500).getResponse();
-    }
+    );
   }
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  HyperAPIBunDriver,
-  HyperAPIBunRequest
+  HyperAPIBunDriver
 });

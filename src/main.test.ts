@@ -168,6 +168,31 @@ describe('errors', () => {
 			});
 		});
 
+		test('JSON array', async () => {
+			const response = await fetch(
+				'http://localhost:18001/api/echo',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: '[1]',
+				},
+			);
+
+			expect(response.status).toBe(400);
+			expect(response.headers.get('Content-Type')).toBe('application/json');
+
+			const body = await response.json();
+			expect(body).toStrictEqual({
+				code: 2,
+				description: 'One of the parameters specified was missing or invalid',
+				data: {
+					message: 'JSON body must be an object',
+				},
+			});
+		});
+
 		// malformed forms isn't a thing with URLSearchParams
 
 		test('multipart disabled', async () => {

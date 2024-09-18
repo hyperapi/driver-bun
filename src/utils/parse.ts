@@ -83,7 +83,7 @@ export async function parseArguments(
 				}
 
 				if (isRecord(args_json) !== true) {
-					throw new HyperAPIBodyInvalidError('JSON body must be an object.');
+					throw new HyperAPIBodyInvalidError('JSON body must be an object');
 				}
 
 				args = args_json;
